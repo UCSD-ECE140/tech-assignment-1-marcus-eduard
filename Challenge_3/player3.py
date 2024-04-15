@@ -76,7 +76,7 @@ def game_state(client, topic_list, msg_payload):
 def lobby(client, topic_list, msg_payload):
     if (msg_payload).decode()[:9] == "Game Over":
         client.disconnect()
-        print("The game was stopped, thank you for playing thr game")
+        print("The game was stopped, thank you for playing the game")
     else:
         print(msg_payload.decode())
     return
