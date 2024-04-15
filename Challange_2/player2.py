@@ -13,9 +13,9 @@ theURL = "d5b09983a26545aea3226f271346f52a.s1.eu.hivemq.cloud"
 # Game Setup
 
 lobby_name = "aLobby1"
-team_name = "team1"
+team_name = "team2"
 team_name1 = "team2"
-player_name = "player1"
+player_name = "player2"
 
 # Moves
 theMoves = {
@@ -228,7 +228,7 @@ if __name__ == '__main__':
     # Connect to the lobby + ask to start the game
     post_player(client,json.dumps({'lobby_name':lobby_name,'team_name':team_name ,'player_name' : player_name}))
     time.sleep(1)
-    post_start(client)
+    # post_start(client)
     time.sleep(1)
     client.loop_forever()
     
