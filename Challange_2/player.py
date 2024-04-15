@@ -1,4 +1,5 @@
 import json
+import time
 import paho.mqtt.client as paho
 from paho import mqtt
 
@@ -23,6 +24,8 @@ theMoves = {
     "RIGHT" : (0, 1)
 }
 
+aPreviousMove = {}
+
 #------------------------------------------------------
 # Definition of response 
 
@@ -40,7 +43,7 @@ def on_subscribe(client, userdata, mid, granted_qos, properties=None):
 
 # dispatch the message 
 def on_message(client, userdata, msg):
-    print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    #print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
     topic_list = msg.topic.split("/")
     # Validate it is input we can deal with
     if topic_list[-1] in dispatch.keys(): 
@@ -52,9 +55,12 @@ def on_message(client, userdata, msg):
 # Dispatch function: deal with the game state
 def game_state(client, topic_list, msg_payload):
     # Process the game state to the user
-    print(msg_payload)
+    aCurentMove = json.loads(msg_payload)
+    get_scores(aCurentMove)
+    publish_scores(aCurentMove)
+    display_board(aCurentMove)
     #Request next move
-    anInput,inputType = move_request(client)
+    anInput,inputType = move_request(aCurentMove)
 
     if inputType == "moves":
         post_move(client, anInput)
@@ -65,7 +71,11 @@ def game_state(client, topic_list, msg_payload):
 
 #Dispatch function: deal with the change of the game state
 def lobby(client, topic_list, msg_payload):
-    print(msg_payload)
+    if (msg_payload).decode()[:9] == "Game Over":
+        client.disconnect()
+        print("The game was stopped, thank you for playing thr game")
+    else:
+        print(msg_payload.decode())
     return
 
 #------------------------------------------------------
@@ -78,26 +88,24 @@ def post_player(client,player):
 
 # Processing the sending of the outgoing message
 def post_move(client, aMove):
-    client.publish("games/{lobby_name}/{player_name}/move", payload=aMove, qos=1)
+    client.publish(f"games/{lobby_name}/{player_name}/move", aMove, qos=1)
     return
 
 # Start the game
 def post_start(client):
-    client.publish("games/{lobby_name}/start", payload="START", qos=1)
+    client.publish(f"games/{lobby_name}/start", payload="START", qos=1)
     return
 
 # Stop the game
 def post_stop(client):
-    client.publish("games/{lobby_name}/start", payload="STOP", qos=1)
-    client.loop_stop()
-    print("The game was stopped, thank you for playing thr game")
+    client.publish(f"games/{lobby_name}/start", payload="STOP", qos=1)
     return
 
 #------------------------------------------------------
 # Process Game Moves
 
 # Requests the move from the user
-def move_request():
+def move_request(aBoard):
     # Pring instructions
     print("----------------------------------------")
     print("Available moves: UP, DOWN, LEFT, RIGHT \nSubmit STOP to stop the game")
@@ -106,12 +114,16 @@ def move_request():
     anInput = input('Please Enter your move: ')
     # Process the input
     if anInput in theMoves:
-        return theMoves[anInput],"moves"
+        return anInput,"moves"
     elif anInput == "STOP":
         return "stop","stop"
     else: 
         print("Incorrect Input")
     return
+
+def display_board(aBoard):
+    return
+
 #------------------------------------------------------
 # Dispatch the messages
 
@@ -146,12 +158,13 @@ if __name__ == '__main__':
     #============================
     # Subscribe to the topics
 
-    client.subscribe("games/{lobby_name}/lobby")
-    client.subscribe("games/{lobby_name}/{player_name}/game_state")
+    client.subscribe(f"games/{lobby_name}/lobby")
+    client.subscribe(f"games/{lobby_name}/{player_name}/game_state")
 
     #============================
     # Connect to the lobby + ask to start the game
-    client.loop_start()
     post_player(client,json.dumps({'lobby_name':lobby_name,'team_name':team_name ,'player_name' : player_name}))
+    time.sleep(1)
     post_start(client)
-
+    client.loop_forever()
+    
