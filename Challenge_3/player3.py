@@ -1,7 +1,10 @@
+import random
 import json
 import time
+from typing import List
 import paho.mqtt.client as paho
 from paho import mqtt
+from moveset import Moveset
 
 #------------------------------------------------------
 # User login parameteras 
@@ -56,11 +59,11 @@ def on_message(client, userdata, msg):
 def game_state(client, topic_list, msg_payload):
     # Process the game state to the user
     aCurentMove = json.loads(msg_payload)
-    get_scores(aCurentMove)
-    publish_scores(aCurentMove)
+    # get_scores(aCurentMove)
+    # publish_scores(aCurentMove)
     display_board(aCurentMove)
     #Request next move
-    anInput,inputType = move_request(aCurentMove)
+    anInput,inputType = random_move(aCurentMove)
 
     if inputType == "moves":
         post_move(client, anInput)
@@ -104,22 +107,46 @@ def post_stop(client):
 #------------------------------------------------------
 # Process Game Moves
 
+# Check for out of bounds movement
+def out_of_bounds(position: List[int]) -> bool:
+    if (position[0] > 9 or position[0] < 0):
+        return True
+    elif (position[1] > 9 or position[1] < 0):
+        return True
+    return False
+
+recent = "SKIP"
+
 # Requests the move from the user
-def move_request(aBoard):
-    # Pring instructions
-    print("----------------------------------------")
-    print("Available moves: UP, DOWN, LEFT, RIGHT \nSubmit STOP to stop the game")
-    print("----------------------------------------")
-    # Get Input
-    anInput = input('Please Enter your move: ')
-    # Process the input
-    if anInput in theMoves:
-        return anInput,"moves"
-    elif anInput == "STOP":
-        return "stop","stop"
-    else: 
-        print("Incorrect Input")
-    return
+def random_move(aBoard):
+    # print(recent)
+    # Check for a wall if new position = wall position, reroll
+    while True:
+        # Assign random pick
+        rand = random.randint(0,3)
+        # Get random Input
+        aMove = list(theMoves.keys())[rand]
+        # if recent != "SKIP":
+        #     print("Not skipping")
+        #     if aMove == recent and random.randint(0,100) >= 50:
+        #         print("Don't Backtrack")
+        #         continue
+        # print(aMove)
+        new = [0, 0]
+        # print(aBoard)
+        current_pos = aBoard['currentPosition']
+        # print(current_pos)
+        new[0] = current_pos[0] + Moveset[aMove].value[0]
+        new[1] = current_pos[1] + Moveset[aMove].value[1]
+        
+        # print(aBoard['walls'])
+        if new in aBoard['walls'] or out_of_bounds(new) == True:
+            print("Bad Move")
+            continue
+        else:
+            # recent = aMove
+            # print(recent)
+            return aMove,"moves"
 
 def display_board(aBoard):
     return
@@ -172,6 +199,5 @@ if __name__ == '__main__':
     # When recieve game state, it starts the next move
     # game state fxn displays the board
         # requests the move 
-        # server then sends gamestate
-
+        # server then sends gamestate 
     
